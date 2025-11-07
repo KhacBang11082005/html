@@ -1,0 +1,205 @@
+from ucimlrepo import fetch_ucirepo 
+from IPython.display import display
+import pandas as pd
+  
+# fetch dataset 
+online_shoppers_purchasing_intention_dataset = fetch_ucirepo(id=468) 
+  
+# data (as pandas dataframes) 
+X = online_shoppers_purchasing_intention_dataset.data.features 
+y = online_shoppers_purchasing_intention_dataset.data.targets 
+# 👉 Gộp X và y lại chung 1 bảng
+data = pd.concat([X, y], axis=1)
+#Hiển thị bảng
+display(data.head())
+#  Thông tin tổng quát
+# ==========================
+print("\n=== Thông tin tổng quát ===")
+data.info()
+
+# ==========================
+#  Kiểm tra giá trị bị thiếu
+# ==========================
+print("\n=== Kiểm tra giá trị bị thiếu ===")
+print(data.isnull().sum())
+
+# =====================================
+# 🎯 Biểu đồ Scatter cho bộ dữ liệu Online Shoppers
+# =====================================
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 1️⃣ Chuyển cột Revenue (True/False) thành số 1/0
+data['Revenue'] = data['Revenue'].astype(int)
+
+# 2️⃣ Chọn cột để biểu diễn
+x = data['ProductRelated_Duration']   # Thời gian xem trang sản phẩm
+y = data['ProductRelated']            # Số lượng trang sản phẩm đã xem
+colors = data['Revenue']              # Màu thể hiện có mua hàng hay không
+sizes = np.sqrt(data['BounceRates'] + 0.01) * 800  # Kích thước dựa trên Bounce Rate
+
+# 3️⃣ Vẽ biểu đồ Scatter
+plt.figure(figsize=(9, 6))
+scatter = plt.scatter(x, y, c=colors, s=sizes, cmap='coolwarm', alpha=0.6, edgecolor='k')
+
+# 4️⃣ Tiêu đề và nhãn trục
+plt.title("Mối quan hệ giữa thời gian và số trang sản phẩm được xem", fontsize=14, fontweight='bold')
+plt.xlabel("Thời gian truy cập trang sản phẩm (giây)")
+plt.ylabel("Số lượng trang sản phẩm được xem")
+
+# 5️⃣ Thêm lưới, giới hạn, và thanh màu
+plt.grid(alpha=0.3)
+plt.xlim(0, np.percentile(x, 95))
+plt.ylim(0, np.percentile(y, 95))
+
+cbar = plt.colorbar(scatter)
+cbar.set_label("Doanh thu: 1 = Có mua hàng | 0 = Không mua hàng")
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+# =====================================
+# 🎯 MÔ HÌNH KNN DỰ ĐOÁN KHÁCH HÀNG MUA HÀNG (REVENUE)
+# =====================================
+
+from ucimlrepo import fetch_ucirepo
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import precision_score, recall_score, classification_report
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix,ConfusionMatrixDisplay, classification_report
+from sklearn.neighbors import KNeighborsClassifier
+import pandas as pd
+
+
+# Mã hóa các cột dạng chuỗi
+le = LabelEncoder()
+for col in data.select_dtypes(include=['object']).columns:
+    data[col] = le.fit_transform(data[col])
+
+# 2️⃣ Chia tập train/test
+X = data.drop(columns=['Revenue'])
+y = data['Revenue']
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# 3️⃣ Chuẩn hóa dữ liệu
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# 4️⃣ Huấn luyện mô hình KNN
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+
+# 5️⃣ Đánh giá kết quả
+print("=== Kết quả mô hình KNN ===")
+print("Độ chính xác (Accuracy):", accuracy_score(y_test, y_pred))
+print("\nBáo cáo chi tiết:")
+print(classification_report(y_test, y_pred))
+# 5️⃣ Đánh giá kết quả bằng Precision
+precision = precision_score(y_test, y_pred)
+print("=== Kết quả mô hình KNN ===")
+print("🎯 Độ chính xác theo Precision:", round(precision, 4))
+print("\n📋 Báo cáo chi tiết:")
+print(classification_report(y_test, y_pred))
+# 5️⃣ Đánh giá kết quả bằng Recall
+recall = recall_score(y_test, y_pred)
+print("=== Kết quả mô hình KNN ===")
+print("🎯 Độ bao phủ (Recall):", round(recall, 4))
+print("\n📋 Báo cáo chi tiết:")
+print(classification_report(y_test, y_pred))
+# 5️⃣ Đánh giá mô hình bằng F1-score
+f1 = f1_score(y_test, y_pred)
+print("=== Kết quả mô hình KNN ===")
+print("🎯 F1-Score:", round(f1, 4))
+
+# 6️⃣ Ma trận nhầm lẫn (Confusion Matrix)
+cm = confusion_matrix(y_test, y_pred)
+print("\n📊 Confusion Matrix:\n", cm)
+
+# Hiển thị ma trận nhầm lẫn bằng biểu đồ
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Không mua", "Mua"])
+disp.plot(cmap='Blues', values_format='d')
+plt.title("Ma trận nhầm lẫn của mô hình KNN")
+plt.show()
+
+
+
+#SVM 
+# =====================================
+# 🤖 MÔ HÌNH SVM DỰ ĐOÁN KHÁCH HÀNG MUA HÀNG (REVENUE)
+# =====================================
+
+from ucimlrepo import fetch_ucirepo
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score,
+    f1_score, confusion_matrix, ConfusionMatrixDisplay, classification_report
+)
+from sklearn.svm import SVC
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# 1️⃣ Tải và xử lý dữ liệu
+dataset = fetch_ucirepo(id=468)
+X = dataset.data.features
+y = dataset.data.targets
+
+data = pd.concat([X, y], axis=1)
+data['Revenue'] = data['Revenue'].astype(int)
+
+# Mã hóa các cột dạng chuỗi (object → số)
+le = LabelEncoder()
+for col in data.select_dtypes(include=['object']).columns:
+    data[col] = le.fit_transform(data[col])
+
+# 2️⃣ Chia tập train/test
+X = data.drop(columns=['Revenue'])
+y = data['Revenue']
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# 3️⃣ Chuẩn hóa dữ liệu
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# 4️⃣ Huấn luyện mô hình SVM
+svm = SVC(kernel='linear', random_state=42)
+svm.fit(X_train, y_train)
+
+# 5️⃣ Dự đoán
+y_pred = svm.predict(X_test)
+
+# 6️⃣ Đánh giá mô hình
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred)
+
+print("=== 🎯 KẾT QUẢ MÔ HÌNH SVM ===")
+print(f"✅ Accuracy : {accuracy:.4f}")
+print(f"✅ Precision: {precision:.4f}")
+print(f"✅ Recall   : {recall:.4f}")
+print(f"✅ F1-score : {f1:.4f}")
+
+print("\n📊 Confusion Matrix:\n", cm)
+print("\n📋 Báo cáo chi tiết:")
+print(classification_report(y_test, y_pred, target_names=["Không mua", "Mua"]))
+
+# 7️⃣ Hiển thị biểu đồ Confusion Matrix
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Không mua", "Mua"])
+disp.plot(cmap='Blues', values_format='d')
+plt.title("Ma trận nhầm lẫn của mô hình SVM")
+plt.show()
+

@@ -1,0 +1,151 @@
+# ================== IMPORT THƯ VIỆN ==================
+from ucimlrepo import fetch_ucirepo
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+
+# fetch dataset 
+online_shoppers_purchasing_intention_dataset = fetch_ucirepo(id=468) 
+  
+# data (as pandas dataframes) 
+X = online_shoppers_purchasing_intention_dataset.data.features 
+y = online_shoppers_purchasing_intention_dataset.data.targets 
+
+
+# 👉 Gộp X và y lại chung 1 bảng
+data = pd.concat([X, y], axis=1)
+
+# Hiển thị 5 dòng đầu tiên
+from IPython.display import display
+display(data.head())
+# Biểu diễn dữ liệu cơ bản
+plt.figure(figsize=(6,4))
+plt.scatter(X.iloc[:,0], X.iloc[:,1])
+plt.xlabel("Sepal Length")
+plt.ylabel("Sepal Width")
+plt.title("Biểu diễn dữ liệu Iris (Sepal Length vs Width)")
+plt.show()
+
+# ================== MÃ HÓA BIẾN PHÂN LOẠI ==================
+# Biến đổi các cột dạng chữ thành số (One-Hot Encoding)
+X = pd.get_dummies(X, drop_first=True)
+
+
+
+# ================== CHIA DỮ LIỆU TRAIN - TEST ==================
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Chuyển y về dạng vector 1D
+y_train = y_train.values.ravel()
+y_test = y_test.values.ravel()
+
+# ================== CHUẨN HÓA DỮ LIỆU ==================
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# ================== MÔ HÌNH SVM ==================
+from sklearn.svm import SVC
+# Huấn luyện SVM
+svm = SVC(kernel='rbf')
+svm.fit(X_train, y_train)
+# Dự đoán
+y_pred_svm = svm.predict(X_test)
+# Đánh giá kết quả
+print("\n=== KẾT QUẢ MÔ HÌNH SVM ===")
+print("Accuracy:", accuracy_score(y_test, y_pred_svm))
+print(classification_report(y_test, y_pred_svm))
+# Ma trận nhầm lẫn
+cm_svm = confusion_matrix(y_test, y_pred_svm)
+ConfusionMatrixDisplay(cm_svm).plot()
+plt.title("Confusion Matrix - SVM")
+plt.show()
+
+# ================== MÔ HÌNH KNN ==================
+from sklearn.neighbors import KNeighborsClassifier
+# Huấn luyện KNN
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+# Dự đoán
+y_pred_knn = knn.predict(X_test)
+# Đánh giá kết quả
+print("\n=== KẾT QUẢ MÔ HÌNH KNN ===")
+print("Accuracy:", accuracy_score(y_test, y_pred_knn))
+print(classification_report(y_test, y_pred_knn))
+# Ma trận nhầm lẫn
+cm_knn = confusion_matrix(y_test, y_pred_knn)
+ConfusionMatrixDisplay(cm_knn).plot()
+plt.title("Confusion Matrix - KNN")
+plt.show()
+
+# ================== TINH CHỈNH SVM (TÙY CHỌN) ==================
+from sklearn.model_selection import GridSearchCV
+
+param_grid = {'C': [0.1, 1, 10], 'kernel': ['linear', 'rbf']}
+grid_svm = GridSearchCV(SVC(), param_grid, cv=5)#tìm bộ tham số giúp mô hình có độ chính xác cao nhất.
+grid_svm.fit(X_train, y_train)
+
+print("\n=== ⚙️ TINH CHỈNH MÔ HÌNH SVM ===")
+print("Best Parameters:", grid_svm.best_params_)
+print("Best CV Score:", round(grid_svm.best_score_, 4))
+
+best_svm = grid_svm.best_estimator_  #lấy mô hình SVM đã được huấn luyện với tham số tối ưu.
+y_pred_best = best_svm.predict(X_test) #dùng mô hình tối ưu để dự đoán nhãn cho tập kiểm tra
+
+print("Final Accuracy (Optimized SVM):", round(accuracy_score(y_test, y_pred_best), 4))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from ucimlrepo import fetch_ucirepo
+
+# Tải dataset
+dataset = fetch_ucirepo(id=468)
+
+X = dataset.data.features
+y = dataset.data.targets
+
+# Đếm số lượng khách mua và không mua
+counts = y['Revenue'].value_counts()
+labels = counts.index.astype(str)
+sizes = counts.values
+
+# Tạo màu giống mẫu
+plt.style.use('_mpl-gallery-nogrid')
+colors = plt.get_cmap('Blues')(np.linspace(0.3, 0.8, len(sizes)))
+
+# Vẽ biểu đồ
+fig, ax = plt.subplots(figsize=(6,6))
+
+ax.pie(sizes, colors=colors, radius=3, center=(4, 4),
+       wedgeprops={"linewidth": 1, "edgecolor": "white"}, 
+       labels=labels, autopct='%1.1f%%', frame=True)
+
+ax.set(xlim=(0, 8), xticks=np.arange(1, 8),
+       ylim=(0, 8), yticks=np.arange(1, 8))
+
+plt.title("Tỷ lệ khách hàng mua hàng (Revenue) trong dataset Online Shop")
+plt.show()
